@@ -1,69 +1,17 @@
-// ============================================================================
-// KONSEP: Package Declaration & Entry Point
-// BELAJAR: Go mengorganisasi kode ke dalam packages. 'main' adalah package khusus untuk membuat executable.
-// POIN PENTING:
-//   - package main: Diperlukan untuk program executable (harus punya func main())
-//   - func main(): Titik masuk - jalan pertama saat program mulai
-// SAMA SEPERTI: Tidak ada di JavaScript, tapi mirip main() function di Node.js CLI atau入口点 di Node.js app
-// CONTOH JAVASCRIPT:
-//   // Tidak ada konsep package di JavaScript, tapi ini mirip dengan entry point:
-//   // app.listen(3000, () => { console.log('Server started'); })
-// ============================================================================
-
 package main
-
-// ============================================================================
-// KONSEP: Imports - System dan Third-Party Packages
-// BELAJAR: Import packages untuk menggunakan fungsionalitasnya. Go punya standard library + third-party.
-// POIN PENTING:
-//   - "database/sql": Standard SQL interface (mirip database driver di Node.js seperti pg, mysql2)
-//   - "log": Logging utilities (mirip console.log di JavaScript)
-//   - "net/http": HTTP server/client (mirip express.js atau http module di Node.js)
-//   - _ "modernc.org/sqlite": Blank import - side effects saja (register driver)
-// SAMA SEPERTI: import statements di JavaScript ES6 (import express from 'express')
-// CONTOH JAVASCRIPT:
-//   // JavaScript/Node.js
-//   import express from 'express';
-//   import sqlite3 from 'sqlite3';
-//   const logger = require('./logger');
-// ============================================================================
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "modernc.org/sqlite"
 )
-
-// ============================================================================
-// KONSEP: Structs - Custom Data Types
-// BELAJAR: Go menggunakan structs bukan classes. Structs mengelompokkan field data yang terkait.
-// POIN PENTING:
-//   - type struct: Mendefinisikan struktur data kustom (mirip class dengan hanya fields di JavaScript)
-//   - PascalCase: Exported fields (public - bisa diakses dari package lain)
-//   - json tags: Mengontrol serialisasi JSON (mirip JSON.parse/stringify di JavaScript)
-//   - Konvensi Go: Public = PascalCase, Private = camelCase
-// SAMA SEPERTI: Objects di JavaScript, tapi dengan tipe yang strict
-// CONTOH JAVASCRIPT:
-//   // JavaScript Object (loosely typed)
-//   const transaction = {
-//     id: 1,
-//     tanggal: "2025-04-06",
-//     jenis: "Pemasukan"
-//   };
-//
-//   // JavaScript Class (OOP)
-//   class Transaction {
-//     constructor(id, tanggal, jenis) {
-//       this.id = id;
-//       this.tanggal = tanggal;
-//       this.jenis = jenis;
-//     }
-//   }
-// ============================================================================
 
 type Transaction struct {
 	ID        int    `json:"id"`
@@ -74,119 +22,15 @@ type Transaction struct {
 	Keterangan string `json:"keterangan"`
 }
 
-// ============================================================================
-// KONSEP: Main Function - Program Entry Point
-// BELAJAR: Setiap program executable Go harus punya main() function di package main.
-// POIN PENTING:
-//   - Tidak ada parameters: Menggunakan command-line args via os.Args (mirip process.argv di Node.js)
-//   - Tidak ada return value: Gunakan os.Exit() untuk exit codes (mirip process.exit di Node.js)
-// SAMA SEPERTI: main() function di Node.js CLI, atau入口点 di aplikasi Node.js
-// CONTOH JAVASCRIPT:
-//   // JavaScript/Node.js entry point
-//   const express = require('express');
-//   const app = express();
-//   
-//   app.listen(8080, () => {
-//     console.log('Server started');
-//   });
-// ============================================================================
-
 func main() {
-	// ============================================================================
-	// KONSEP: Database Connection - sql.Open()
-	// BELAJAR: Buka koneksi database. Connection pooling ditangani secara otomatis.
-	// POIN PENTING:
-	//   - sql.Open("driver", "dataSource"): Mengembalikan *sql.DB dan error
-	//   - *sql.DB: Pointer ke database object (mirip connection pool di Node.js)
-	//   - Multiple returns: (value, error) - pattern error handling Go
-	//   - "./cashflow.db": SQLite file path (buat jika belum ada)
-	// SAMA SEPERTI: new sqlite3.Database() di Node.js, atau new Pool() di pg
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan sqlite3
-	//   const sqlite3 = require('sqlite3');
-	//   const db = new sqlite3.Database('./cashflow.db', (err) => {
-	//     if (err) console.error(err);
-	//   });
-	//   
-	//   // JavaScript dengan pg (PostgreSQL)
-	//   const { Pool } = require('pg');
-	//   const pool = new Pool({
-	//     connectionString: 'postgres://localhost/mydb'
-	//   });
-	// ============================================================================
 	db, err := sql.Open("sqlite", "./cashflow.db")
-	
-	// ============================================================================
-	// KONSEP: Error Handling Pattern
-	// BELAJAR: Go menggunakan explicit error checking bukan try/catch.
-	// POIN PENTING:
-	//   - if err != nil: Cek jika error ada (mirip catching exceptions)
-	//   - log.Fatal(err): Print error dan exit program (mirip console.error + process.exit)
-	//   - Tidak ada try/catch: Explicit checking mencegah hidden errors
-	// SAMA SEPERTI: try/catch di JavaScript, tapi lebih explicit dan predictable
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan try/catch
-	//   try {
-	//     const result = riskyOperation();
-	//   } catch (error) {
-	//     console.error(error);
-	//     process.exit(1);
-	//   }
-	//   
-	//   // JavaScript dengan promise
-	//   riskyOperation()
-	//     .then(result => { /* handle success */ })
-	//     .catch(error => { console.error(error); });
-	// ============================================================================
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// ============================================================================
-	// KONSEP: Defer Statement - Cleanup Execution
-	// BELAJAR: Defer menjadwalkan function untuk dijalankan saat function saat ini returns.
-	// POIN PENTING:
-	//   - defer db.Close(): Tutup koneksi saat main() exits
-	//   - LIFO order: Multiple defers jalan urutan terbalik (Last In, First Out)
-	//   - Guaranteed: Selalu jalan, bahkan jika panic() terjadi (mirip finally di try/catch)
-	// SAMA SEPERTI: finally block di try/catch di JavaScript
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan finally
-	//   try {
-	//     const data = await fetchData();
-	//   } catch (error) {
-	//     console.error(error);
-	//   } finally {
-	//     db.close(); // selalu jalan
-	//   }
-	// ============================================================================
-
 	defer db.Close()
 
-	// ============================================================================
-	// KONSEP: SQL Table Creation - db.Exec()
-	// BELAJAR: Eksekusi SQL statements yang tidak return rows (INSERT, UPDATE, DELETE, CREATE).
-	// POIN PENTING:
-	//   - Backticks: Raw string literals (tidak butuh escape characters)
-	//   - db.Exec(query, args...): Eksekusi SQL dengan optional parameters
-	//   - _, err = db.Exec(): Underscore ignore return value (kita tidak butuh Result)
-	//   - CREATE TABLE IF NOT EXISTS: Operasi idempotent (aman untuk jalan berkali-kali)
-	// SAMA SEPERTI: db.run() di Node.js sqlite3, atau db.query() di pg
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan sqlite3
-	//   db.run(`
-	//     CREATE TABLE IF NOT EXISTS transactions (
-	//       id INTEGER PRIMARY KEY AUTOINCREMENT,
-	//       tanggal TEXT NOT NULL,
-	//       jenis TEXT NOT NULL,
-	//       kategori TEXT NOT NULL,
-	//       nominal INTEGER NOT NULL,
-	//       keterangan TEXT
-	//     )
-	//   `, (err) => {
-	//     if (err) console.error(err);
-	//   });
-	// ============================================================================
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS transactions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,43 +47,8 @@ func main() {
 	}
 	log.Println("Database initialized successfully")
 
-	// ============================================================================
-	// KONSEP: Gin Router - HTTP Framework
-	// BELAJAR: Gin adalah web framework untuk membangun HTTP servers.
-	// POIN PENTING:
-	//   - gin.Default(): Creates router dengan Logger dan Recovery middleware
-	//   - Router: Menangani URL routing dan request/response handling
-	//   - Alternative: gin.New() untuk router tanpa middleware
-	// SAMA SEPERTI: express() di Express.js, atau Koa router
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan Express.js
-	//   const express = require('express');
-	//   const app = express();
-	//   
-	//   // Middleware default
-	//   app.use(express.json());
-	//   app.use(express.urlencoded({ extended: true }));
-	// ============================================================================
 	r := gin.Default()
 
-	// ============================================================================
-	// KONSEP: Middleware - Request Processing Pipeline
-	// BELAJAR: Middleware functions jalan sebelum/sesudah handlers. Digunakan untuk CORS, auth, logging.
-	// POIN PENTING:
-	//   - r.Use(middleware): Register middleware untuk jalan di semua requests
-	//   - CORS: Cross-Origin Resource Sharing (browser security)
-	//   - Config: Define domains yang boleh akses API kamu
-	//   - AllowOrigins: ["http://localhost:5173"] - Hanya boleh React app kamu
-	// SAMA SEPERTI: app.use() di Express.js, middleware di Koa
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan Express.js
-	//   const cors = require('cors');
-	//   app.use(cors({
-	//     origin: 'http://localhost:5173',
-	//     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-	//     allowedHeaders: ['Content-Type']
-	//   }));
-	// ============================================================================
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -248,59 +57,314 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// ============================================================================
-	// KONSEP: Route Definition - HTTP Endpoints
-	// BELAJAR: Define URL patterns dan handler functions mereka.
-	// POIN PENTING:
-	//   - r.GET(path, handler): Handle GET requests di path yang ditentukan
-	//   - func(c *gin.Context): Handler function menerima request/response context
-	//   - c.JSON(status, data): Return JSON response secara otomatis
-	//   - http.StatusOK: Constant untuk HTTP 200 OK
-	// SAMA SEPERTI: app.get() di Express.js, router.get() di Koa
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan Express.js
-	//   app.get('/ping', (req, res) => {
-	//     res.json({ message: 'pong' });
-	//   });
-	// ============================================================================
 	r.GET("/ping", func(c *gin.Context) {
-		// gin.H adalah shortcut untuk map[string]interface{} (JSON object)
-		// Sama seperti object literal di JavaScript
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
 
-	// ============================================================================
-	// KONSEP: Server Startup - HTTP Server
-	// BELAJAR: Start HTTP server untuk listen incoming requests.
-	// POIN PENTING:
-	//   - r.Run(":8081"): Listen di port 8081 (bind ke semua interfaces)
-	//   - Blocks execution: Server jalan sampai stopped atau error terjadi
-	//   - Error handling: Check jika server gagal start (port in use, dll)
-	// SAMA SEPERTI: app.listen() di Express.js, server.listen() di Node.js
-	// CONTOH JAVASCRIPT:
-	//   // JavaScript dengan Express.js
-	//   app.listen(8081, () => {
-	//     console.log('Server running on http://localhost:8081');
-	//   });
-	// ============================================================================
+
+	r.GET("/transactions", getTransactionsHandler(db))
+	r.GET("/transactions/:id", getTransactionByIDHandler(db))
+	r.POST("/transactions", createTransactionHandler(db))
+	r.PUT("/transactions/:id", updateTransactionHandler(db))
+	r.DELETE("/transactions/:id", deleteTransactionHandler(db))
+
 	log.Println("Server starting on http://localhost:8080")
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// ============================================================================
-// RINGKASAN KONSEP GO YANG DIPELAJARI:
-// 
-// 1. Package System: package main, import statements
-// 2. Structs: Custom data types dengan JSON tags
-// 3. Multiple Returns: (value, error) pattern
-// 4. Error Handling: if err != nil pattern (tidak ada try/catch)
-// 5. Defer: Cleanup statements (LIFO execution)
-// 6. Database Operations: sql.Open, db.Exec
-// 7. Web Framework: Gin router, handlers, middleware
-// 8. HTTP Handling: Context, JSON responses
-// 9. Server Configuration: Port binding, error handling
-// ============================================================================
+func getAllTransactions(db *sql.DB, filters map[string]string) ([]Transaction, error) {
+	query := "SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions WHERE 1=1"
+	args := []interface{}{}
+	argCount := 0
+
+	if jenis, ok := filters["jenis"]; ok {
+		argCount++
+		query += fmt.Sprintf(" AND jenis = $%d", argCount)
+		args = append(args, jenis)
+	}
+
+	if kategori, ok := filters["kategori"]; ok {
+		argCount++
+		query += fmt.Sprintf(" AND kategori = $%d", argCount)
+		args = append(args, kategori)
+	}
+
+	if tanggal, ok := filters["tanggal"]; ok {
+		argCount++
+		query += fmt.Sprintf(" AND tanggal = $%d", argCount)
+		args = append(args, tanggal)
+	}
+
+	if startDate, ok := filters["startDate"]; ok {
+		argCount++
+		query += fmt.Sprintf(" AND tanggal >= $%d", argCount)
+		args = append(args, startDate)
+	}
+
+	if endDate, ok := filters["endDate"]; ok {
+		argCount++
+		query += fmt.Sprintf(" AND tanggal <= $%d", argCount)
+		args = append(args, endDate)
+	}
+
+	query += " ORDER BY id DESC"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []Transaction
+	for rows.Next() {
+		var t Transaction
+		err := rows.Scan(&t.ID, &t.Tanggal, &t.Jenis, &t.Kategori, &t.Nominal, &t.Keterangan)
+		if err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, t)
+	}
+
+	return transactions, nil
+}
+
+func getTransactionByID(db *sql.DB, id int) (*Transaction, error) {
+	var t Transaction
+	err := db.QueryRow(
+		"SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions WHERE id = $1",
+		id,
+	).Scan(&t.ID, &t.Tanggal, &t.Jenis, &t.Kategori, &t.Nominal, &t.Keterangan)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
+}
+
+func createTransaction(db *sql.DB, t Transaction) (int64, error) {
+	result, err := db.Exec(
+		"INSERT INTO transactions (tanggal, jenis, kategori, nominal, keterangan) VALUES ($1, $2, $3, $4, $5)",
+		t.Tanggal, t.Jenis, t.Kategori, t.Nominal, t.Keterangan,
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
+func updateTransaction(db *sql.DB, t Transaction) error {
+	result, err := db.Exec(
+		"UPDATE transactions SET tanggal=$1, jenis=$2, kategori=$3, nominal=$4, keterangan=$5 WHERE id=$6",
+		t.Tanggal, t.Jenis, t.Kategori, t.Nominal, t.Keterangan, t.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("transaction not found")
+	}
+
+	return nil
+}
+
+func deleteTransaction(db *sql.DB, id int) error {
+	result, err := db.Exec("DELETE FROM transactions WHERE id=$1", id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("transaction not found")
+	}
+
+	return nil
+}
+
+func validateTransaction(t Transaction) error {
+	if t.Tanggal == "" {
+		return errors.New("tanggal is required")
+	}
+	if t.Jenis != "Pemasukan" && t.Jenis != "Pengeluaran" {
+		return errors.New("jenis must be 'Pemasukan' or 'Pengeluaran'")
+	}
+	if t.Kategori == "" {
+		return errors.New("kategori is required")
+	}
+	return nil
+}
+
+func sendSuccessResponse(c *gin.Context, statusCode int, data interface{}) {
+	c.JSON(statusCode, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func sendErrorResponse(c *gin.Context, statusCode int, message string) {
+	log.Printf("[ERROR] %s", message)
+	c.JSON(statusCode, gin.H{
+		"success": false,
+		"error":   message,
+	})
+}
+
+func getTransactionsHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		filters := make(map[string]string)
+
+		if jenis := c.Query("jenis"); jenis != "" {
+			filters["jenis"] = jenis
+		}
+		if kategori := c.Query("kategori"); kategori != "" {
+			filters["kategori"] = kategori
+		}
+		if tanggal := c.Query("tanggal"); tanggal != "" {
+			filters["tanggal"] = tanggal
+		}
+		if startDate := c.Query("startDate"); startDate != "" {
+			filters["startDate"] = startDate
+		}
+		if endDate := c.Query("endDate"); endDate != "" {
+			filters["endDate"] = endDate
+		}
+
+		transactions, err := getAllTransactions(db, filters)
+		if err != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get transactions: %v", err))
+			return
+		}
+
+		log.Printf("[INFO] GET /transactions - Retrieved %d transactions", len(transactions))
+		sendSuccessResponse(c, http.StatusOK, gin.H{
+			"transactions": transactions,
+		})
+	}
+}
+
+func getTransactionByIDHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
+			return
+		}
+
+		transaction, err := getTransactionByID(db, id)
+		if err != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get transaction: %v", err))
+			return
+		}
+
+		if transaction == nil {
+			sendErrorResponse(c, http.StatusNotFound, "Transaction not found")
+			return
+		}
+
+		log.Printf("[INFO] GET /transactions/%d - Retrieved transaction", id)
+		sendSuccessResponse(c, http.StatusOK, gin.H{
+			"transaction": transaction,
+		})
+	}
+}
+
+func createTransactionHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var t Transaction
+		if err := c.ShouldBindJSON(&t); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
+			return
+		}
+
+		if err := validateTransaction(t); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Validation error: %v", err))
+			return
+		}
+
+		id, err := createTransaction(db, t)
+		if err != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to create transaction: %v", err))
+			return
+		}
+
+		log.Printf("[INFO] POST /transactions - Created transaction ID: %d", id)
+		sendSuccessResponse(c, http.StatusCreated, gin.H{
+			"id": id,
+		})
+	}
+}
+
+func updateTransactionHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
+			return
+		}
+
+		var t Transaction
+		if err := c.ShouldBindJSON(&t); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
+			return
+		}
+
+		t.ID = id
+
+		if err := validateTransaction(t); err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Validation error: %v", err))
+			return
+		}
+
+		if err := updateTransaction(db, t); err != nil {
+			if err.Error() == "transaction not found" {
+				sendErrorResponse(c, http.StatusNotFound, "Transaction not found")
+				return
+			}
+			sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update transaction: %v", err))
+			return
+		}
+
+		log.Printf("[INFO] PUT /transactions/%d - Updated transaction", id)
+		sendSuccessResponse(c, http.StatusOK, gin.H{
+			"id": id,
+		})
+	}
+}
+
+func deleteTransactionHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			sendErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
+			return
+		}
+
+		if err := deleteTransaction(db, id); err != nil {
+			if err.Error() == "transaction not found" {
+				sendErrorResponse(c, http.StatusNotFound, "Transaction not found")
+				return
+			}
+			sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to delete transaction: %v", err))
+			return
+		}
+
+		log.Printf("[INFO] DELETE /transactions/%d - Deleted transaction", id)
+		sendSuccessResponse(c, http.StatusOK, gin.H{
+			"id": id,
+		})
+	}
+}

@@ -1,361 +1,99 @@
 # 💰 Cashflow Backend API - Go & Gin
 
-REST API lengkap untuk monitoring keuangan menggunakan Go, framework Gin, dan database SQLite.
+A REST API for financial transaction management built with Go, Gin framework, and SQLite.
 
 ## 📋 Table of Contents
 
-- [📖 Deskripsi Proyek](#-deskripsi-proyek)
-- [👨‍💻 Panduan untuk Pengembang JS](#-panduan-untuk-pengembang-js)
-- [🛠️ Prasyarat](#️-prasyarat)
-- [🚀 Cara Menjalankan](#-cara-menjalankan)
-- [📡 Dokumentasi API/Fungsi](#-dokumentasi-apifungsi)
-- [⚙️ Penjelasan Konsep Go](#️-penjelasan-konsep-go)
-- [📁 Struktur Folder](#-struktur-folder)
-- [🐛 Troubleshooting](-troubleshooting)
-- [📚 Lanjutkan Belajar](-lanjutkan-belajar)
+- [About](#about)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Database Schema](#database-schema)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## 📖 Deskripsi Proyek
+## About
 
-**Cashflow Backend API** adalah backend REST API untuk monitoring keuangan (cashflow) yang dibangun dengan bahasa Go. Proyek ini dirancang untuk membantu developer JavaScript bertransisi ke Go sambil membangun aplikasi backend yang fungsional.
-
-### 🎯 Fungsi Teknis
-
-- ✅ **REST API Server**: HTTP server yang melayani request/response dengan format JSON
-- ✅ **Database SQLite**: Database relasional ringan untuk menyimpan data transaksi keuangan
-- ✅ **CORS Middleware**: Cross-Origin Resource Sharing untuk integrasi frontend
-- ✅ **Auto Database Creation**: Database dan tabel dibuat otomatis jika belum ada
-- ✅ **Error Handling**: Pattern error handling yang eksplisit dan predictable
-
-### 🛠️ Tech Stack
-
-| Komponen | Teknologi | Versi | Fungsi |
-|----------|----------|-------|--------|
-| **Bahasa** | Go | 1.25+ | Bahasa pemrograman backend |
-| **Web Framework** | Gin | 1.12.0 | HTTP router & middleware |
-| **Database** | SQLite | 3.x | Penyimpanan data |
-| **HTTP Library** | net/http | Standard library | HTTP server/client |
-| **CORS** | gin-contrib/cors | 1.7.7 | Cross-origin handling |
-
-### 🎨 Fitur Utama
-
-- 🚀 **Single Binary Deployment**: Hasil compile adalah satu executable file tanpa dependencies
-- 📊 **Structured Logging**: Log output yang jelas dan mudah dipantau
-- 🔒 **Secure CORS**: Konfigurasi CORS yang aman untuk production
-- 💾 **SQLite Database**: Database tanpa server, mudah di-setup
-- 📚 **Learning-Friendly**: Kode dengan komentar detail untuk belajar Go
-- 🔄 **Type-Safe**: Compile-time type checking (beda dengan JavaScript!)
+Cashflow Backend API is a REST API for managing financial transactions. It provides a complete CRUD interface for tracking income and expenses with support for filtering, search, and comprehensive error handling.
 
 ---
 
-## 👨‍💻 Panduan untuk Pengembang JS
+## Features
 
-Selamat datang di Go! Sebagai developer JavaScript yang berpengalaman, kamu mungkin terbiasa dengan struktur Node.js. Berikut perbandingan penting:
-
-### 📦 Package.json vs Go Module
-
-| JavaScript (Node.js) | Go | Keterangan |
-|----------------------|-----|------------|
-| `package.json` | `go.mod` | Daftar dependencies |
-| `package-lock.json` | `go.sum` | Checksum & version lock |
-| `npm install` | `go mod download` | Download dependencies |
-| `npm run dev` | `go run .` | Run project |
-| `npm run build` | `go build` | Compile executable |
-
-**Perbedaan Utama:**
-- **JavaScript**: Interpreted language, perlu Node.js runtime
-- **Go**: Compiled language, hasilnya single binary (tidak butuh runtime!)
-
-### 📁 Struktur Folder: Node.js vs Go
-
-```
-Node.js Project Structure          │  Go Project Structure
-─────────────────────────────────────┼─────────────────────────────────────
-my-nodejs-app/                      │  cashflow-backend/
-├── src/                            │  ├── main.go (entry point)
-│   ├── index.js (entry point)      │  ├── go.mod (dependencies)
-│   ├── controllers/                │  ├── go.sum (checksums)
-│   │   └── userController.js      │  └── cashflow.db (database)
-│   ├── models/                     │
-│   │   └── user.js                 │
-│   └── routes/                     │
-│       └── userRoutes.js           │
-├── package.json                    │
-└── node_modules/ (dependencies)    │  // Dependencies di:
-                                     │  // $GOPATH/pkg/mod/ (global cache)
-```
-
-### 🎯 Entry Point: App.listen() vs main()
-
-**JavaScript (Express.js):**
-```javascript
-// src/index.js atau app.js
-const express = require('express');
-const app = express();
-
-app.listen(8081, () => {
-  console.log('Server started on port 8081');
-});
-```
-
-**Go:**
-```go
-// main.go
-package main
-
-import (
-  "log"
-  "net/http"
-)
-
-func main() {  // ← Entry point, HARUS ada
-  log.Println("Server starting...")
-  // Setup code here...
-}
-```
-
-### 🔧 Dependency Management: npm vs go mod
-
-**JavaScript:**
-```bash
-npm install express
-npm install --save-dev jest
-```
-
-**Go:**
-```bash
-go get github.com/gin-gonic/gin
-go get -u github.com/gin-gonic/gin  # update
-go mod tidy  # clean unused deps
-```
-
-### 🚀 Running Project: npm start vs go run
-
-**JavaScript:**
-```bash
-npm start           # start production
-npm run dev         # start development
-node index.js       # run directly
-```
-
-**Go:**
-```bash
-go run .            # run without compile (development)
-go build            # compile executable
-./cashflow-backend  # run compiled binary
-```
-
-### 📦 Import: require/import vs import
-
-**JavaScript (ES6):**
-```javascript
-import express from 'express';
-import { getUser } from './controllers/userController';
-const sqlite3 = require('sqlite3');
-```
-
-**Go:**
-```go
-import (
-  "database/sql"
-  "net/http"
-  "github.com/gin-gonic/gin"
-  _ "modernc.org/sqlite"  // blank import untuk side effects
-)
-```
-
-### 🔍 Error Handling: try/catch vs if err != nil
-
-**JavaScript:**
-```javascript
-try {
-  const result = await riskyOperation();
-  return result;
-} catch (error) {
-  console.error(error);
-  throw error;
-}
-```
-
-**Go:**
-```go
-result, err := riskyOperation()
-if err != nil {
-  log.Fatal(err)  // atau return err
-}
-return result
-```
-
-**Catatan:** Go TIDAK punya try/catch! Error handling sangat eksplisit.
-
-### 🏗️ Data Structures: Objects vs Structs
-
-**JavaScript:**
-```javascript
-const transaction = {
-  id: 1,
-  tanggal: "2026-04-06",
-  jenis: "Pemasukan",
-  nominal: 100000
-};
-```
-
-**Go:**
-```go
-type Transaction struct {
-  ID        int    `json:"id"`
-  Tanggal   string `json:"tanggal"`
-  Jenis     string `json:"jenis"`
-  Nominal   int    `json:"nominal"`
-}
-```
-
-**Perbedaan:**
-- **JavaScript**: Objects dinamis, bisa tambah properti sembarang
-- **Go**: Structs punya tipe tetap (type-safe)
-
-### 🌐 HTTP Server: app.get() vs r.GET()
-
-**JavaScript (Express.js):**
-```javascript
-app.get('/ping', (req, res) => {
-  res.json({ message: 'pong' });
-});
-```
-
-**Go (Gin):**
-```go
-r.GET("/ping", func(c *gin.Context) {
-  c.JSON(http.StatusOK, gin.H{
-    "message": "pong",
-  })
-})
-```
+- ✅ **RESTful API**: Full CRUD operations with standard HTTP methods
+- ✅ **SQLite Database**: Lightweight, serverless database with auto-initialization
+- ✅ **Query Filtering**: Filter transactions by type, category, and date range
+- ✅ **CORS Support**: Configurable cross-origin resource sharing for frontend integration
+- ✅ **Input Validation**: Basic validation for required fields and transaction types
+- ✅ **Structured Responses**: Consistent JSON response format with proper status codes
+- ✅ **Single Binary Deployment**: Compiled to a single executable without dependencies
+- ✅ **Comprehensive Logging**: INFO and ERROR level logging for all operations
+- ✅ **Error Handling**: Explicit error checking with meaningful error messages
 
 ---
 
-## 🛠️ Prasyarat
+## Tech Stack
 
-Sebelum memulai, pastikan Anda sudah memenuhi prasyarat berikut:
+| Component | Technology | Version | Description |
+|-----------|------------|---------|-------------|
+| **Language** | Go | 1.25+ | Backend programming language |
+| **Web Framework** | Gin | 1.12.0 | HTTP router and middleware |
+| **Database** | SQLite | 3.x | Relational database storage |
+| **HTTP Library** | net/http | Standard | HTTP server/client |
+| **CORS** | gin-contrib/cors | 1.7.7 | Cross-origin request handling |
 
-### 1. Go Installation
+---
 
-**Cek versi Go yang sudah terinstall:**
+## Prerequisites
+
+- **Go 1.25 or higher**
+
+### Check Go Version
 ```bash
 go version
 ```
 
-**Output yang diharapkan:**
+Expected output:
 ```
 go version go1.25.6 linux/amd64
 ```
 
-### 2. Jika Belum Install Go
-
-**Windows:**
-```bash
-# Download installer dari: https://go.dev/dl/
-# Run installer dan follow wizard
-# Verify installation:
-go version
-```
-
-**Linux/WSL:**
-```bash
-# Download Go
-wget https://go.dev/dl/go1.25.6.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.25.6.linux-amd64.tar.gz
-
-# Add to PATH (tambahkan ke ~/.bashrc atau ~/.zshrc)
-export PATH=$PATH:/usr/local/go/bin
-
-# Verify
-go version
-```
-
-**macOS:**
-```bash
-# Install dengan Homebrew
-brew install go
-
-# Verify
-go version
-```
-
-### 3. Environment Setup (Optional tapi Recommended)
-
-```bash
-# Set GOPATH (Go 1.11+ sudah pakai Go modules, tapi tetap useful)
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
-
-# Verify Go environment
-go env
-```
-
-### 4. Development Tools (Optional)
-
-**VS Code Extensions:**
-- Go (golang.go)
-- SQLite (alexcvzz.vscode-sqlite)
-
 ---
 
-## 🚀 Cara Menjalankan
+## Installation
 
-Ikuti langkah-langkah ini untuk menjalankan proyek:
-
-### 📝 Langkah 1: Navigate ke Project Directory
-
+### Step 1: Navigate to Project Directory
 ```bash
-cd /mnt/d/._show-case/go-cahsflow-rest-api
+cd /path/to/go-cahsflow-rest-api
 ```
 
-### 📦 Langkah 2: Install Dependencies
-
-Mirip dengan `npm install`, tapi di Go kita pakai `go get`:
-
+### Step 2: Install Dependencies
 ```bash
-# Install semua dependencies
-go get github.com/gin-gonic/gin
-go get modernc.org/sqlite
-go get github.com/gin-contrib/cors
-
-# Clean up unused dependencies
-go mod tidy
+go mod download
 ```
 
-**Apa yang terjadi:**
-- `go get`: Download package ke cache lokal (`$GOPATH/pkg/mod/`)
-- `go.mod`: File yang track semua dependencies (mirip `package.json`)
-- `go.sum`: File dengan cryptographic hashes (mirip `package-lock.json`)
-- `go mod tidy`: Remove dependencies yang tidak dipakai
+This downloads all required dependencies listed in `go.mod`.
 
-### 🔨 Langkah 3: Build Application
-
+### Step 3: Build Application
 ```bash
-# Build executable untuk sistem saat ini
-go build -o cashflow-backend.exe .
+go build -o cashflow-backend .
 ```
 
-**Apa yang terjadi:**
-- `go build`: Compile Go code ke binary executable
-- `-o cashflow-backend.exe`: Nama output file
-- `.`: Source directory (current directory)
-- Hasilnya adalah **single binary** - tidak butuh Node.js atau dependencies lain!
+This compiles the Go code into a single executable binary.
 
 **Output:**
-```
-cashflow-backend.exe (Windows)
-cashflow-backend (Linux/macOS)
-```
+- `cashflow-backend.exe` (Windows)
+- `cashflow-backend` (Linux/macOS)
 
-### ▶️ Langkah 4: Run Server
+### Step 4: Run Server
 
-Ada 3 cara untuk menjalankan server:
-
-**Cara 1: Run dari Binary (Production)**
+**Option 1: Run from Binary**
 ```bash
 # Windows
 ./cashflow-backend.exe
@@ -364,68 +102,90 @@ Ada 3 cara untuk menjalankan server:
 ./cashflow-backend
 ```
 
-**Cara 2: Run Tanpa Compile (Development)**
+**Option 2: Run Without Compiling (Development)**
 ```bash
 go run .
 ```
 
-**Cara 3: Run di Background (Linux/macOS)**
+**Option 3: Run in Background (Linux/macOS)**
 ```bash
-# Run di background
 ./cashflow-backend &
-
-# Atau dengan nohup (tetap jalan setelah logout)
-nohup ./cashflow-backend &
-
-# Check logs
-tail -f server.log
 ```
 
-### ✅ Langkah 5: Verify Server Running
+### Step 5: Verify Server
 
 ```bash
-# Test ping endpoint
-curl http://localhost:8081/ping
-
-# Expected response:
-# {"message":"pong"}
+curl http://localhost:8080/ping
 ```
 
-**Output yang diharapkan:**
-```
-2026/04/06 11:00:00 Database initialized successfully
-[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
-[GIN-debug] Listening and serving HTTP on :8081
-```
-
-### 🛑 Langkah 6: Stop Server
-
-**Stop dengan Ctrl+C** (jika jalan di foreground)
-
-```bash
-# Atau kill process
-pkill cashflow-backend
-
-# Atau find dan kill PID
-ps aux | grep cashflow-backend
-kill <PID>
+Expected response:
+```json
+{
+  "message": "pong"
+}
 ```
 
 ---
 
-## 📡 Dokumentasi API/Fungsi
+## Usage
 
-Proyek ini saat ini memiliki endpoint dasar. Berikut dokumentasinya:
+### Running the Server
 
-### 🔍 GET /ping
-
-**Deskripsi:** Health check endpoint untuk memverifikasi server berjalan.
-
-**Request:**
+Start the server:
 ```bash
-curl http://localhost:8081/ping
+./cashflow-backend
 ```
+
+The server will start on `http://localhost:8080` by default.
+
+### Stopping the Server
+
+Press `Ctrl+C` to stop the server if running in the foreground, or use:
+```bash
+pkill cashflow-backend
+```
+
+### Environment Variables
+
+The application can be configured using the following approaches:
+
+1. **Direct Configuration**: Edit values in `main.go`
+2. **Environment Variables** (not yet implemented, but can be added)
+
+---
+
+## API Documentation
+
+### Base URL
+```
+http://localhost:8080
+```
+
+### Response Format
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Error message here"
+}
+```
+
+### Endpoints
+
+#### 1. Health Check
+
+**GET /ping**
+
+Check if the server is running.
 
 **Response:**
 ```json
@@ -434,13 +194,263 @@ curl http://localhost:8081/ping
 }
 ```
 
-**Status Code:**
-- `200 OK`: Server berjalan normal
+**Status Codes:**
+- `200 OK`: Server is running
 
-### 📊 Database Schema
+---
 
-Tabel `transactions` dibuat otomatis dengan schema berikut:
+#### 2. List All Transactions
 
+**GET /transactions**
+
+Retrieve all transactions with optional filtering.
+
+**Query Parameters:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `jenis` | string | Filter by transaction type | `?jenis=Pemasukan` |
+| `kategori` | string | Filter by category | `?kategori=Gaji` |
+| `tanggal` | string | Filter by exact date (YYYY-MM-DD) | `?tanggal=2026-04-06` |
+| `startDate` | string | Filter by start date (YYYY-MM-DD) | `?startDate=2026-01-01` |
+| `endDate` | string | Filter by end date (YYYY-MM-DD) | `?endDate=2026-12-31` |
+
+**Examples:**
+
+Get all transactions:
+```bash
+curl http://localhost:8080/transactions
+```
+
+Filter by transaction type:
+```bash
+curl "http://localhost:8080/transactions?jenis=Pemasukan"
+```
+
+Filter by date range:
+```bash
+curl "http://localhost:8080/transactions?startDate=2026-01-01&endDate=2026-12-31"
+```
+
+Multiple filters:
+```bash
+curl "http://localhost:8080/transactions?jenis=Pemasukan&kategori=Gaji"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": 1,
+        "tanggal": "2026-04-06",
+        "jenis": "Pemasukan",
+        "kategori": "Gaji",
+        "nominal": 5000000,
+        "keterangan": "Monthly salary"
+      },
+      {
+        "id": 2,
+        "tanggal": "2026-04-07",
+        "jenis": "Pengeluaran",
+        "kategori": "Makan",
+        "nominal": 50000,
+        "keterangan": "Lunch"
+      }
+    ]
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Successfully retrieved transactions
+- `500 Internal Server Error`: Database error
+
+---
+
+#### 3. Get Transaction by ID
+
+**GET /transactions/:id**
+
+Retrieve a single transaction by its ID.
+
+**Example:**
+```bash
+curl http://localhost:8080/transactions/1
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transaction": {
+      "id": 1,
+      "tanggal": "2026-04-06",
+      "jenis": "Pemasukan",
+      "kategori": "Gaji",
+      "nominal": 5000000,
+      "keterangan": "Monthly salary"
+    }
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Successfully retrieved transaction
+- `404 Not Found`: Transaction with specified ID does not exist
+- `400 Bad Request`: Invalid transaction ID format
+- `500 Internal Server Error`: Database error
+
+---
+
+#### 4. Create Transaction
+
+**POST /transactions**
+
+Create a new transaction.
+
+**Request Body:**
+```json
+{
+  "tanggal": "2026-04-06",
+  "jenis": "Pemasukan",
+  "kategori": "Gaji",
+  "nominal": 5000000,
+  "keterangan": "Monthly salary"
+}
+```
+
+**Validation Rules:**
+- `tanggal` (required): Transaction date (YYYY-MM-DD format)
+- `jenis` (required): Must be "Pemasukan" or "Pengeluaran"
+- `kategori` (required): Category of the transaction
+- `nominal` (required): Transaction amount (integer)
+- `keterangan` (optional): Additional description
+
+**Example:**
+```bash
+curl -X POST http://localhost:8080/transactions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tanggal": "2026-04-06",
+    "jenis": "Pemasukan",
+    "kategori": "Gaji",
+    "nominal": 5000000,
+    "keterangan": "Monthly salary"
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1
+  }
+}
+```
+
+**Status Codes:**
+- `201 Created`: Transaction successfully created
+- `400 Bad Request`: Validation error or invalid request body
+- `500 Internal Server Error`: Database error
+
+---
+
+#### 5. Update Transaction
+
+**PUT /transactions/:id**
+
+Update an existing transaction.
+
+**Request Body:**
+```json
+{
+  "tanggal": "2026-04-06",
+  "jenis": "Pemasukan",
+  "kategori": "Gaji",
+  "nominal": 6000000,
+  "keterangan": "Monthly salary updated"
+}
+```
+
+**Example:**
+```bash
+curl -X PUT http://localhost:8080/transactions/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tanggal": "2026-04-06",
+    "jenis": "Pemasukan",
+    "kategori": "Gaji",
+    "nominal": 6000000,
+    "keterangan": "Monthly salary updated"
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Transaction successfully updated
+- `400 Bad Request`: Validation error or invalid request body
+- `404 Not Found`: Transaction with specified ID does not exist
+- `500 Internal Server Error`: Database error
+
+---
+
+#### 6. Delete Transaction
+
+**DELETE /transactions/:id**
+
+Delete a transaction by its ID.
+
+**Example:**
+```bash
+curl -X DELETE http://localhost:8080/transactions/1
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Transaction successfully deleted
+- `404 Not Found`: Transaction with specified ID does not exist
+- `400 Bad Request`: Invalid transaction ID format
+- `500 Internal Server Error`: Database error
+
+---
+
+## Database Schema
+
+### Table: transactions
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique identifier |
+| `tanggal` | TEXT | NOT NULL | Transaction date |
+| `jenis` | TEXT | NOT NULL | Transaction type (Pemasukan/Pengeluaran) |
+| `kategori` | TEXT | NOT NULL | Transaction category |
+| `nominal` | INTEGER | NOT NULL | Transaction amount |
+| `keterangan` | TEXT | - | Additional description |
+
+**SQL Schema:**
 ```sql
 CREATE TABLE IF NOT EXISTS transactions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -452,271 +462,116 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 ```
 
-**Field Mapping (Struct Go):**
+### Field Mapping
 
-| Field Go | Type | JSON Key | Deskripsi |
-|----------|------|----------|-----------|
-| `ID` | `int` | `"id"` | Primary key (auto-increment) |
-| `Tanggal` | `string` | `"tanggal"` | Tanggal transaksi (format: YYYY-MM-DD) |
-| `Jenis` | `string` | `"jenis"` | Jenis transaksi (Pemasukan/Pengeluaran) |
-| `Kategori` | `string` | `"kategori"` | Kategori transaksi |
-| `Nominal` | `int` | `"nominal"` | Jumlah nominal (integer) |
-| `Keterangan` | `string` | `"keterangan"` | Deskripsi tambahan |
-
----
-
-## ⚙️ Penjelasan Konsep Go
-
-Proyek ini menggunakan beberapa konsep penting di Go. Berikut penjelasannya:
-
-### 1. 📦 Package System
-
-**Konsep:**
-- `package main`: Package khusus untuk membuat executable
-- Harus ada `func main()` di package main untuk titik masuk program
-
-**Contoh:**
-```go
-package main  // ← Package declaration
-
-func main() {  // ← Entry point
-  // Code here
-}
-```
-
-**JavaScript Analogi:**
-- Mirip dengan `index.js` atau `app.js` sebagai entry point
-
-### 2. 🏗️ Structs
-
-**Konsep:**
-- Go menggunakan structs, bukan classes
-- Structs mengelompokkan field data yang terkait
-- Tipe data sangat strict (type-safe)
-
-**Contoh:**
-```go
-type Transaction struct {
-  ID        int    `json:"id"`
-  Tanggal   string `json:"tanggal"`
-  Jenis     string `json:"jenis"`
-}
-```
-
-**JavaScript Analogi:**
-```javascript
-// JavaScript Object (loose typing)
-const transaction = { id: 1, tanggal: "2026-04-06" };
-
-// JavaScript Class (OOP)
-class Transaction {
-  constructor(id, tanggal) {
-    this.id = id;
-    this.tanggal = tanggal;
-  }
-}
-```
-
-### 3. 🔄 Multiple Returns
-
-**Konsep:**
-- Functions di Go bisa mengembalikan multiple values
-- Pattern umum: `(value, error)` - return value dan error
-
-**Contoh:**
-```go
-db, err := sql.Open("sqlite", "./cashflow.db")
-if err != nil {
-  log.Fatal(err)
-}
-```
-
-**JavaScript Analogi:**
-```javascript
-// JavaScript tidak punya multiple returns
-// Biasanya pakai object atau array
-const result = await riskyOperation();
-if (result.error) {
-  console.error(result.error);
-}
-```
-
-### 4. ❌ Error Handling
-
-**Konsep:**
-- Go TIDAK punya try/catch
-- Error handling sangat eksplisit dengan `if err != nil`
-- Prevents hidden errors
-
-**Contoh:**
-```go
-// Go - explicit error checking
-result, err := someFunction()
-if err != nil {
-  log.Fatal(err)
-}
-// Process result...
-```
-
-**JavaScript Analogi:**
-```javascript
-// JavaScript - try/catch
-try {
-  const result = await someFunction();
-  // Process result...
-} catch (error) {
-  console.error(error);
-}
-```
-
-### 5. ⏳ Defer Statement
-
-**Konsep:**
-- `defer` menjadwalkan function untuk dijalankan saat function exits
-- LIFO order (Last In, First Out)
-- Dijalankan bahkan jika panic() terjadi
-
-**Contoh:**
-```go
-func main() {
-  db, err := sql.Open("sqlite", "./cashflow.db")
-  if err != nil {
-    log.Fatal(err)
-  }
-  defer db.Close()  // ← Ditutup saat main() exits
-
-  // Code here...
-}
-```
-
-**JavaScript Analogi:**
-```javascript
-// JavaScript - finally block
-try {
-  const db = await connectDB();
-  // Code here...
-} catch (error) {
-  console.error(error);
-} finally {
-  await db.close();  // ← Selalu jalan
-}
-```
-
-### 6. 🌐 HTTP Server (Gin)
-
-**Konsep:**
-- Gin adalah HTTP web framework performa tinggi
-- Router menangani URL routing dan request/response
-- Middleware untuk request processing pipeline
-
-**Contoh:**
-```go
-r := gin.Default()  // Router dengan default middleware
-
-r.GET("/ping", func(c *gin.Context) {
-  c.JSON(http.StatusOK, gin.H{
-    "message": "pong",
-  })
-})
-```
-
-**JavaScript Analogi:**
-```javascript
-// Express.js
-const app = express();
-
-app.get('/ping', (req, res) => {
-  res.json({ message: 'pong' });
-});
-```
-
-### 7. 🗄️ Database Operations
-
-**Konsep:**
-- `database/sql`: Standard SQL interface
-- `sql.Open()`: Buka koneksi database
-- `db.Exec()`: Eksekusi SQL tanpa return rows
-- `db.Query()`: Eksekusi SQL yang return rows
-
-**Contoh:**
-```go
-db, err := sql.Open("sqlite", "./cashflow.db")
-_, err = db.Exec("CREATE TABLE IF NOT EXISTS ...")
-```
-
-**JavaScript Analogi:**
-```javascript
-// Node.js sqlite3
-const db = new sqlite3.Database('./cashflow.db');
-db.run("CREATE TABLE IF NOT EXISTS ...");
-```
+| JSON Key | Go Field | Go Type | Description |
+|----------|----------|---------|-------------|
+| `id` | `ID` | `int` | Primary key (auto-increment) |
+| `tanggal` | `Tanggal` | `string` | Transaction date (YYYY-MM-DD) |
+| `jenis` | `Jenis` | `string` | Transaction type (Pemasukan/Pengeluaran) |
+| `kategori` | `Kategori` | `string` | Transaction category |
+| `nominal` | `Nominal` | `int` | Transaction amount |
+| `keterangan` | `Keterangan` | `string` | Additional description |
 
 ---
 
-## 📁 Struktur Folder
+## Project Structure
 
 ```
 go-cahsflow-rest-api/
-├── main.go                  # Entry point aplikasi (mirip index.js)
-├── go.mod                   # Module dependencies (mirip package.json)
-├── go.sum                   # Dependency checksums (mirip package-lock.json)
+├── main.go                  # Application entry point and main logic
+├── go.mod                   # Module dependencies
+├── go.sum                   # Dependency checksums and versions
 ├── cashflow.db              # SQLite database file (auto-created)
 ├── cashflow-backend.exe     # Compiled binary (Windows)
-├── server.log               # Server logs (opsional)
-└── README.md                # Dokumentasi ini
+├── .gitignore               # Git ignore rules
+└── README.md                # This file
 ```
 
-### 📂 Penjelasan Setiap File
+### File Descriptions
 
-| File | Deskripsi | Mirip di JavaScript |
-|------|----------|---------------------|
-| `main.go` | Entry point aplikasi dan semua logic | `index.js` atau `server.js` |
-| `go.mod` | Module dependencies & version | `package.json` |
-| `go.sum` | Dependency checksums & security | `package-lock.json` |
-| `cashflow.db` | SQLite database file | `database.sqlite` |
-| `cashflow-backend.exe` | Compiled executable | Tidak ada (JS interpreted) |
-| `README.md` | Dokumentasi proyek | `README.md` |
+| File | Description |
+|------|-------------|
+| `main.go` | Entry point with all application logic including handlers, database operations, and server setup |
+| `go.mod` | Module definition and dependency list (similar to `package.json`) |
+| `go.sum` | Dependency checksums for security (similar to `package-lock.json`) |
+| `cashflow.db` | SQLite database file (created automatically on first run) |
+| `cashflow-backend.exe` | Compiled Windows executable (generated by `go build`) |
+| `.gitignore` | Git ignore patterns for binaries, databases, and temporary files |
+| `README.md` | Project documentation |
 
-### 🔄 Perbandingan Workflow
+---
 
-**JavaScript (Node.js):**
+## Configuration
+
+### Port Configuration
+
+Default port: `8080`
+
+To change the port, edit `main.go`:
+
+```go
+// Find this line in main.go
+if err := r.Run(":8080"); err != nil {
+
+// Change to desired port
+if err := r.Run(":3000"); err != nil {
 ```
-npm install → node_modules/ dependencies
-npm run dev → Start development server
-npm run build → Bundle (optional)
+
+### Database Configuration
+
+Default database path: `./cashflow.db`
+
+To change the database location, edit `main.go`:
+
+```go
+// Find this line in main.go
+db, err := sql.Open("sqlite", "./cashflow.db")
+
+// Change to desired path
+db, err := sql.Open("sqlite", "./data/cashflow.db")
 ```
 
-**Go:**
-```
-go get → $GOPATH/pkg/mod/ dependencies (global cache)
-go run . → Run without compile
-go build → Compile to single binary
-./binary → Run compiled binary
+### CORS Configuration
+
+Default allowed origin: `http://localhost:5173`
+
+To configure allowed origins, edit `main.go`:
+
+```go
+// Find the CORS configuration
+r.Use(cors.New(cors.Config{
+    AllowOrigins: []string{"http://localhost:5173"},
+    // ... other config
+}))
+
+// Add more origins
+AllowOrigins: []string{"http://localhost:5173", "https://yourdomain.com"},
 ```
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Error 1: Port Already in Use
+### Error: Port Already in Use
 
 **Problem:**
 ```
-listen tcp :8081: bind: address already in use
+listen tcp :8080: bind: address already in use
 ```
 
 **Solution:**
 ```bash
-# Find process using port 8081
-netstat -ano | findstr :8081  # Windows
-lsof -ti:8081                  # Linux/macOS
+# Find process using port 8080
+netstat -ano | findstr :8080  # Windows
+lsof -ti:8080                  # Linux/macOS
 
 # Kill the process
 taskkill /PID <PID> /F         # Windows
 kill -9 <PID>                  # Linux/macOS
 ```
 
-### Error 2: Module Not Found
+### Error: Module Not Found
 
 **Problem:**
 ```
@@ -735,11 +590,11 @@ go mod download
 go mod tidy
 ```
 
-### Error 3: Connection Refused
+### Error: Connection Refused
 
 **Problem:**
 ```
-curl: (7) Failed to connect to localhost port 8081: Connection refused
+curl: (7) Failed to connect to localhost port 8080: Connection refused
 ```
 
 **Solution:**
@@ -748,45 +603,43 @@ curl: (7) Failed to connect to localhost port 8081: Connection refused
 ps aux | grep cashflow-backend
 
 # Restart server
-./cashflow-backend.exe
+./cashflow-backend
+
+# Check if port is correct
+curl http://localhost:8080/ping
 ```
 
-### Error 4: CORS Issues
+### Error: CORS Issues
 
-**Problem:** Frontend tidak bisa akses API
+**Problem:** Frontend cannot access the API
+
+**Solution:** Verify CORS configuration in `main.go` and ensure your frontend origin is in `AllowOrigins`:
+
+```go
+r.Use(cors.New(cors.Config{
+    AllowOrigins: []string{"http://localhost:5173", "http://localhost:3000"},
+}))
+```
+
+### Error: Database Locked
+
+**Problem:**
+```
+database is locked
+```
 
 **Solution:**
-```go
-// Check CORS config di main.go
-// Pastikan origin frontend kamu ada di AllowOrigins
-r.Use(cors.New(cors.Config{
-    AllowOrigins: []string{"http://localhost:5173"},
-}))
+```bash
+# Close all connections
+pkill cashflow-backend
+
+# Check if another process is holding the database
+fuser cashflow.db  # Linux
 ```
 
 ---
 
-## 📚 Lanjutkan Belajar
-
-### Next Steps untuk CRUD Endpoints
-
-Setelah `GET /ping` berjalan, implementasikan endpoint CRUD:
-
-1. **GET /transactions** - Ambil semua transactions
-2. **POST /transactions** - Buat transaction baru
-3. **PUT /transactions/:id** - Update transaction
-4. **DELETE /transactions/:id** - Hapus transaction
-
-### Resources untuk Belajar Lanjut
-
-**📖 Dokumentasi Resmi:**
-- [Go Documentation](https://go.dev/doc/)
-- [Gin Framework](https://gin-gonic.com/docs/)
-- [SQL Database](https://go.dev/doc/database/sql-overview)
-
-**🎓 Tutorial:**
-- [Go by Example](https://gobyexample.com/)
-- [A Tour of Go](https://tour.go.dev/welcome/1)
+## Development
 
 ### Useful Go Commands
 
@@ -795,9 +648,11 @@ Setelah `GET /ping` berjalan, implementasikan endpoint CRUD:
 go mod init <module-name>    # Initialize module
 go mod tidy                  # Clean dependencies
 go mod download              # Download dependencies
+go mod verify                # Verify dependencies
 
 # Building
 go build                     # Build executable
+go build -o app.exe .        # Build with custom name
 go run .                     # Run without building
 
 # Testing
@@ -813,36 +668,40 @@ go env                       # Show Go environment
 go version                   # Show Go version
 ```
 
-### JavaScript vs Go Quick Reference
+---
 
-| Konsep | JavaScript | Go |
-|--------|-----------|-----|
-| Variable | `let x = 10` | `x := 10` |
-| Function | `const add = (a,b) => a+b` | `func add(a,b int) int { return a+b }` |
-| Object | `{ name: "John" }` | `struct { Name string }` |
-| Array | `[1, 2, 3]` | `[]int{1, 2, 3}` |
-| Error | `try/catch` | `if err != nil` |
-| Async | `async/await` | `goroutines + channels` |
-| Import | `import express` | `import "github.com/gin-gonic/gin"` |
-| Package | NPM packages | Go modules |
+## API Status
+
+- ✅ Server running on `localhost:8080`
+- ✅ SQLite database auto-initialized
+- ✅ CORS middleware configured
+- ✅ `GET /ping` - Health check endpoint
+- ✅ `GET /transactions` - List all transactions with filters
+- ✅ `GET /transactions/:id` - Get transaction by ID
+- ✅ `POST /transactions` - Create transaction
+- ✅ `PUT /transactions/:id` - Update transaction
+- ✅ `DELETE /transactions/:id` - Delete transaction
+- ✅ Input validation for all operations
+- ✅ Comprehensive logging for all operations
 
 ---
 
-## 📊 Project Status
+## Contributing
 
-- ✅ Server berjalan di `localhost:8081`
-- ✅ Database SQLite dibuat otomatis
-- ✅ CORS middleware enabled
-- ✅ GET /ping endpoint berfungsi
-- ⏳ GET /transactions endpoint (belum diimplementasi)
-- ⏳ POST /transactions endpoint (belum diimplementasi)
-- ⏳ PUT /transactions endpoint (belum diimplementasi)
-- ⏳ DELETE /transactions endpoint (belum diimplementasi)
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
-**🎉 Selamat Belajar Go!** 
+## License
 
-Proyek ini dirancang khusus untuk membantu developer JavaScript bertransisi ke Go. Kode sudah dilengkapi dengan komentar detail yang menjelaskan setiap konsep Go dengan analogi JavaScript.
+This project is licensed under the MIT License.
 
-Happy coding! 🚀
+---
+
+**Happy Coding! 🚀**
