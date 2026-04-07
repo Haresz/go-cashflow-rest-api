@@ -18,7 +18,7 @@ type Transaction struct {
 	Tanggal   string `json:"tanggal"`
 	Jenis     string `json:"jenis"`
 	Kategori  string `json:"kategori"`
-	Nominal   int    `json:"nominal"`
+	Nominal   uint    `json:"nominal"`
 	Keterangan string `json:"keterangan"`
 }
 
@@ -201,6 +201,9 @@ func validateTransaction(t Transaction) error {
 	}
 	if t.Kategori == "" {
 		return errors.New("kategori is required")
+	}
+	if t.Nominal <= 0 {
+		return  errors.New("nominal must be greater than 0")
 	}
 	return nil
 }
