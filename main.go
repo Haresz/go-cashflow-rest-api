@@ -113,6 +113,12 @@ func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string
 		args = append(args, endDate)
 	}
 
+	if search, ok := filters["search"]; ok {
+		argCount++
+		whereClause += fmt.Sprintf(" AND (kategori LIKE $%d OR keterangan LIKE $%d)", argCount, argCount)
+		args = append(args, "%"+search+"%")
+	}
+
 	query += whereClause
 
 	usePagination := (page > 0 && limit > 0)
@@ -300,6 +306,9 @@ func getTransactionsHandler(db *sql.DB) gin.HandlerFunc {
 		}
 		if endDate := c.Query("endDate"); endDate != "" {
 			filters["endDate"] = endDate
+		}
+		if search := c.Query("search"); search != "" {
+			filters["search"] = search
 		}
 
 		page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))

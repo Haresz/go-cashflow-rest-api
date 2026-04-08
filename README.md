@@ -220,6 +220,7 @@ Retrieve transactions with optional filtering, sorting, and pagination.
 | `tanggal` | string | - | Filter by exact date (YYYY-MM-DD) | `?tanggal=2026-04-06` |
 | `startDate` | string | - | Filter by start date (YYYY-MM-DD) | `?startDate=2026-01-01` |
 | `endDate` | string | - | Filter by end date (YYYY-MM-DD) | `?endDate=2026-12-31` |
+| `search` | string | - | Search in `kategori` and `keterangan` (case-insensitive, partial match) | `?search=gaji` |
 | `sortColumn` | string | `id` (no pagination) or `tanggal` (with pagination) | Column to sort by: id, tanggal, jenis, kategori, nominal, keterangan | `?sortColumn=nominal&page=1&limit=10` |
 | `sortOrder` | string | `DESC` | Sort direction: ASC or DESC | `?sortOrder=ASC&page=1&limit=10` |
 | `page` | integer | `0` (no pagination) | Page number (1-based, required with limit) | `?page=1&limit=10` |
@@ -237,6 +238,9 @@ curl "http://localhost:8080/transactions?jenis=Pemasukan"
 
 # Multiple filters (no pagination)
 curl "http://localhost:8080/transactions?jenis=Pemasukan&kategori=Gaji"
+
+# Search transactions containing "gaji"
+curl "http://localhost:8080/transactions?search=gaji"
 ```
 
 **2. With Pagination:**
@@ -252,6 +256,9 @@ curl "http://localhost:8080/transactions?jenis=Pemasukan&sortColumn=nominal&sort
 
 # Date range filter, sorted by date ascending, page 1
 curl "http://localhost:8080/transactions?startDate=2026-01-01&endDate=2026-12-31&sortColumn=tanggal&sortOrder=ASC&page=1&limit=15"
+
+# Search "gaji", sorted by highest nominal, page 1
+curl "http://localhost:8080/transactions?search=gaji&sortColumn=nominal&sortOrder=DESC&page=1&limit=10"
 ```
 
 **3. Advanced Combinations:**
@@ -261,6 +268,9 @@ curl "http://localhost:8080/transactions?jenis=Pemasukan&kategori=Gaji&sortColum
 
 # All 2026 transactions, sorted by category, page 3
 curl "http://localhost:8080/transactions?startDate=2026-01-01&endDate=2026-12-31&sortColumn=kategori&sortOrder=ASC&page=3&limit=25"
+
+# Search "bonus", income only, sorted by date, page 1
+curl "http://localhost:8080/transactions?search=bonus&jenis=Pemasukan&sortColumn=tanggal&sortOrder=DESC&page=1&limit=10"
 ```
 
 **Response Without Pagination:**
