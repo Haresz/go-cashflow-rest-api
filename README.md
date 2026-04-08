@@ -203,41 +203,67 @@ Check if the server is running.
 
 **GET /transactions**
 
-Retrieve all transactions with optional filtering.
+Retrieve transactions with optional filtering, sorting, and pagination.
+
+**Important Note:**
+- Pagination is **opt-in** by default
+- If neither `page` nor `limit` are provided, returns **all** transactions (existing behavior)
+- To use pagination, **both** `page` and `limit` must be provided
+- Sorting customization is only available when using pagination
 
 **Query Parameters:**
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `jenis` | string | Filter by transaction type | `?jenis=Pemasukan` |
-| `kategori` | string | Filter by category | `?kategori=Gaji` |
-| `tanggal` | string | Filter by exact date (YYYY-MM-DD) | `?tanggal=2026-04-06` |
-| `startDate` | string | Filter by start date (YYYY-MM-DD) | `?startDate=2026-01-01` |
-| `endDate` | string | Filter by end date (YYYY-MM-DD) | `?endDate=2026-12-31` |
+| Parameter | Type | Default | Description | Example |
+|-----------|------|---------|-------------|---------|
+| `jenis` | string | - | Filter by transaction type | `?jenis=Pemasukan` |
+| `kategori` | string | - | Filter by category | `?kategori=Gaji` |
+| `tanggal` | string | - | Filter by exact date (YYYY-MM-DD) | `?tanggal=2026-04-06` |
+| `startDate` | string | - | Filter by start date (YYYY-MM-DD) | `?startDate=2026-01-01` |
+| `endDate` | string | - | Filter by end date (YYYY-MM-DD) | `?endDate=2026-12-31` |
+| `sortColumn` | string | `id` (no pagination) or `tanggal` (with pagination) | Column to sort by: id, tanggal, jenis, kategori, nominal, keterangan | `?sortColumn=nominal&page=1&limit=10` |
+| `sortOrder` | string | `DESC` | Sort direction: ASC or DESC | `?sortOrder=ASC&page=1&limit=10` |
+| `page` | integer | `0` (no pagination) | Page number (1-based, required with limit) | `?page=1&limit=10` |
+| `limit` | integer | `0` (no pagination) | Items per page (1-100, required with page) | `?limit=10&page=1` |
 
 **Examples:**
 
-Get all transactions:
+**1. Default (No pagination - returns all):**
 ```bash
-curl http://localhost:8080/transactions
-```
+# Returns all transactions, sorted by id DESC (backward compatible)
+curl "http://localhost:8080/transactions"
 
-Filter by transaction type:
-```bash
+# With filters (no pagination)
 curl "http://localhost:8080/transactions?jenis=Pemasukan"
-```
 
-Filter by date range:
-```bash
-curl "http://localhost:8080/transactions?startDate=2026-01-01&endDate=2026-12-31"
-```
-
-Multiple filters:
-```bash
+# Multiple filters (no pagination)
 curl "http://localhost:8080/transactions?jenis=Pemasukan&kategori=Gaji"
 ```
 
-**Response:**
+**2. With Pagination:**
+```bash
+# Page 1, 10 items per page, sorted by tanggal DESC (default)
+curl "http://localhost:8080/transactions?page=1&limit=10"
+
+# Page 2, 20 items, sorted by nominal ASC
+curl "http://localhost:8080/transactions?page=2&limit=20&sortColumn=nominal&sortOrder=ASC"
+
+# Filter by income, sorted by highest nominal first, page 1
+curl "http://localhost:8080/transactions?jenis=Pemasukan&sortColumn=nominal&sortOrder=DESC&page=1&limit=10"
+
+# Date range filter, sorted by date ascending, page 1
+curl "http://localhost:8080/transactions?startDate=2026-01-01&endDate=2026-12-31&sortColumn=tanggal&sortOrder=ASC&page=1&limit=15"
+```
+
+**3. Advanced Combinations:**
+```bash
+# Income transactions, category "Gaji", sorted by highest nominal, page 2
+curl "http://localhost:8080/transactions?jenis=Pemasukan&kategori=Gaji&sortColumn=nominal&sortOrder=DESC&page=2&limit=10"
+
+# All 2026 transactions, sorted by category, page 3
+curl "http://localhost:8080/transactions?startDate=2026-01-01&endDate=2026-12-31&sortColumn=kategori&sortOrder=ASC&page=3&limit=25"
+```
+
+**Response Without Pagination:**
 ```json
 {
   "success": true,
@@ -263,6 +289,52 @@ curl "http://localhost:8080/transactions?jenis=Pemasukan&kategori=Gaji"
   }
 }
 ```
+
+**Response With Pagination:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": 1,
+        "tanggal": "2026-04-06",
+        "jenis": "Pemasukan",
+        "kategori": "Gaji",
+        "nominal": 5000000,
+        "keterangan": "Monthly salary"
+      },
+      {
+        "id": 2,
+        "tanggal": "2026-04-07",
+        "jenis": "Pengeluaran",
+        "kategori": "Makan",
+        "nominal": 50000,
+        "keterangan": "Lunch"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 150,
+      "totalPages": 15,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Pagination Metadata:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `page` | integer | Current page number |
+| `limit` | integer | Items per page |
+| `total` | integer | Total number of transactions matching filters |
+| `totalPages` | integer | Total number of pages |
+| `hasNext` | boolean | True if next page exists |
+| `hasPrev` | boolean | True if previous page exists |
 
 **Status Codes:**
 - `200 OK`: Successfully retrieved transactions

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -76,46 +77,75 @@ func main() {
 	}
 }
 
-func getAllTransactions(db *sql.DB, filters map[string]string) ([]Transaction, error) {
-	query := "SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions WHERE 1=1"
+func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string, sortOrder string, page int, limit int) ([]Transaction, int64, error) {
+	whereClause := " WHERE 1=1"
+	query := "SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions"
 	args := []interface{}{}
 	argCount := 0
 
 	if jenis, ok := filters["jenis"]; ok {
 		argCount++
-		query += fmt.Sprintf(" AND jenis = $%d", argCount)
+		whereClause += fmt.Sprintf(" AND jenis = $%d", argCount)
 		args = append(args, jenis)
 	}
 
 	if kategori, ok := filters["kategori"]; ok {
 		argCount++
-		query += fmt.Sprintf(" AND kategori = $%d", argCount)
+		whereClause += fmt.Sprintf(" AND kategori = $%d", argCount)
 		args = append(args, kategori)
 	}
 
 	if tanggal, ok := filters["tanggal"]; ok {
 		argCount++
-		query += fmt.Sprintf(" AND tanggal = $%d", argCount)
+		whereClause += fmt.Sprintf(" AND tanggal = $%d", argCount)
 		args = append(args, tanggal)
 	}
 
 	if startDate, ok := filters["startDate"]; ok {
 		argCount++
-		query += fmt.Sprintf(" AND tanggal >= $%d", argCount)
+		whereClause += fmt.Sprintf(" AND tanggal >= $%d", argCount)
 		args = append(args, startDate)
 	}
 
 	if endDate, ok := filters["endDate"]; ok {
 		argCount++
-		query += fmt.Sprintf(" AND tanggal <= $%d", argCount)
+		whereClause += fmt.Sprintf(" AND tanggal <= $%d", argCount)
 		args = append(args, endDate)
 	}
 
-	query += " ORDER BY id DESC"
+	query += whereClause
+
+	usePagination := (page > 0 && limit > 0)
+	if usePagination {
+		validColumns := map[string]bool{
+			"id": true, "tanggal": true, "jenis": true,
+			"kategori": true, "nominal": true, "keterangan": true,
+		}
+		if !validColumns[sortColumn] {
+			sortColumn = "tanggal"
+		}
+
+		if sortOrder != "ASC" && sortOrder != "DESC" {
+			sortOrder = "DESC"
+		}
+
+		query += fmt.Sprintf(" ORDER BY %s %s", sortColumn, sortOrder)
+
+		argCount++
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, limit)
+
+		argCount++
+		offset := (page - 1) * limit
+		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, offset)
+	} else {
+		query += " ORDER BY id DESC"
+	}
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -124,12 +154,26 @@ func getAllTransactions(db *sql.DB, filters map[string]string) ([]Transaction, e
 		var t Transaction
 		err := rows.Scan(&t.ID, &t.Tanggal, &t.Jenis, &t.Kategori, &t.Nominal, &t.Keterangan)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		transactions = append(transactions, t)
 	}
 
-	return transactions, nil
+	countQuery := "SELECT COUNT(*) FROM transactions" + whereClause
+	countArgs := make([]interface{}, len(args)-2)
+	if usePagination {
+		copy(countArgs, args[:len(args)-2])
+	} else {
+		copy(countArgs, args)
+	}
+
+	var total int64
+	err = db.QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return transactions, total, nil
 }
 
 func getTransactionByID(db *sql.DB, id int) (*Transaction, error) {
@@ -223,6 +267,21 @@ func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 	})
 }
 
+func getPaginationMetadata(page int, limit int, total int64) map[string]interface{} {
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+	hasNext := page < totalPages
+	hasPrev := page > 1
+
+	return map[string]interface{}{
+		"page":       page,
+		"limit":      limit,
+		"total":      total,
+		"totalPages": totalPages,
+		"hasNext":    hasNext,
+		"hasPrev":    hasPrev,
+	}
+}
+
 func getTransactionsHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		filters := make(map[string]string)
@@ -243,16 +302,41 @@ func getTransactionsHandler(db *sql.DB) gin.HandlerFunc {
 			filters["endDate"] = endDate
 		}
 
-		transactions, err := getAllTransactions(db, filters)
+		page, _ := strconv.Atoi(c.DefaultQuery("page", "0"))
+		limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
+
+		usePagination := (page > 0 && limit > 0)
+
+		var sortColumn, sortOrder string
+		if usePagination {
+			sortColumn = c.DefaultQuery("sortColumn", "tanggal")
+			sortOrder = c.DefaultQuery("sortOrder", "DESC")
+
+			if page < 1 {
+				page = 1
+			}
+			if limit < 1 || limit > 100 {
+				limit = 10
+			}
+		} else {
+			sortColumn = "id"
+			sortOrder = "DESC"
+		}
+
+		transactions, total, err := getAllTransactions(db, filters, sortColumn, sortOrder, page, limit)
 		if err != nil {
 			sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get transactions: %v", err))
 			return
 		}
 
+		response := gin.H{"transactions": transactions}
+
+		if usePagination {
+			response["pagination"] = getPaginationMetadata(page, limit, total)
+		}
+
 		log.Printf("[INFO] GET /transactions - Retrieved %d transactions", len(transactions))
-		sendSuccessResponse(c, http.StatusOK, gin.H{
-			"transactions": transactions,
-		})
+		sendSuccessResponse(c, http.StatusOK, response)
 	}
 }
 
