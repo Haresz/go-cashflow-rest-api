@@ -7,41 +7,39 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	_ "modernc.org/sqlite"
 )
 
 type Transaction struct {
-	ID        int    `json:"id"`
-	Tanggal   string `json:"tanggal"`
-	Jenis     string `json:"jenis"`
-	Kategori  string `json:"kategori"`
-	Nominal   uint    `json:"nominal"`
+	ID         int    `json:"id"`
+	Tanggal    string `json:"tanggal"`
+	Jenis      string `json:"jenis"`
+	Kategori   string `json:"kategori"`
+	Nominal    uint   `json:"nominal"`
 	Keterangan string `json:"keterangan"`
 }
 
-func main() {
-	db, err := sql.Open("sqlite", "./cashflow.db")
+var createTableSQL = `
+CREATE TABLE IF NOT EXISTS transactions (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	tanggal TEXT NOT NULL,
+	jenis TEXT NOT NULL,
+	kategori TEXT NOT NULL,
+	nominal INTEGER NOT NULL,
+	keterangan TEXT
+);`
 
+func main() {
+	db, cleanup, err := initDB()
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer cleanup()
 
-	defer db.Close()
-
-	createTableSQL := `
-	CREATE TABLE IF NOT EXISTS transactions (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		tanggal TEXT NOT NULL,
-		jenis TEXT NOT NULL,
-		kategori TEXT NOT NULL,
-		nominal INTEGER NOT NULL,
-		keterangan TEXT
-	);`
-	
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
 		log.Fatal(err)
@@ -50,8 +48,13 @@ func main() {
 
 	r := gin.Default()
 
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{frontendURL},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -64,15 +67,19 @@ func main() {
 		})
 	})
 
-
 	r.GET("/transactions", getTransactionsHandler(db))
 	r.GET("/transactions/:id", getTransactionByIDHandler(db))
 	r.POST("/transactions", createTransactionHandler(db))
 	r.PUT("/transactions/:id", updateTransactionHandler(db))
 	r.DELETE("/transactions/:id", deleteTransactionHandler(db))
 
-	log.Println("Server starting on http://localhost:8080")
-	if err := r.Run(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Server starting on port %s", port)
+	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -81,41 +88,35 @@ func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string
 	whereClause := " WHERE 1=1"
 	query := "SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions"
 	args := []interface{}{}
-	argCount := 0
 
 	if jenis, ok := filters["jenis"]; ok {
-		argCount++
-		whereClause += fmt.Sprintf(" AND jenis = $%d", argCount)
+		whereClause += " AND jenis = ?"
 		args = append(args, jenis)
 	}
 
 	if kategori, ok := filters["kategori"]; ok {
-		argCount++
-		whereClause += fmt.Sprintf(" AND kategori = $%d", argCount)
+		whereClause += " AND kategori = ?"
 		args = append(args, kategori)
 	}
 
 	if tanggal, ok := filters["tanggal"]; ok {
-		argCount++
-		whereClause += fmt.Sprintf(" AND tanggal = $%d", argCount)
+		whereClause += " AND tanggal = ?"
 		args = append(args, tanggal)
 	}
 
 	if startDate, ok := filters["startDate"]; ok {
-		argCount++
-		whereClause += fmt.Sprintf(" AND tanggal >= $%d", argCount)
+		whereClause += " AND tanggal >= ?"
 		args = append(args, startDate)
 	}
 
 	if endDate, ok := filters["endDate"]; ok {
-		argCount++
-		whereClause += fmt.Sprintf(" AND tanggal <= $%d", argCount)
+		whereClause += " AND tanggal <= ?"
 		args = append(args, endDate)
 	}
 
 	if search, ok := filters["search"]; ok {
-		argCount++
-		whereClause += fmt.Sprintf(" AND (kategori LIKE $%d OR keterangan LIKE $%d)", argCount, argCount)
+		whereClause += " AND (kategori LIKE ? OR keterangan LIKE ?)"
+		args = append(args, "%"+search+"%")
 		args = append(args, "%"+search+"%")
 	}
 
@@ -137,14 +138,11 @@ func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string
 
 		query += fmt.Sprintf(" ORDER BY %s %s", sortColumn, sortOrder)
 
-		argCount++
-		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		query += " LIMIT ?"
 		args = append(args, limit)
 
-		argCount++
-		offset := (page - 1) * limit
-		query += fmt.Sprintf(" OFFSET $%d", argCount)
-		args = append(args, offset)
+		query += " OFFSET ?"
+		args = append(args, (page-1)*limit)
 	} else {
 		query += " ORDER BY id DESC"
 	}
@@ -185,7 +183,7 @@ func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string
 func getTransactionByID(db *sql.DB, id int) (*Transaction, error) {
 	var t Transaction
 	err := db.QueryRow(
-		"SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions WHERE id = $1",
+		"SELECT id, tanggal, jenis, kategori, nominal, keterangan FROM transactions WHERE id = ?",
 		id,
 	).Scan(&t.ID, &t.Tanggal, &t.Jenis, &t.Kategori, &t.Nominal, &t.Keterangan)
 
@@ -201,7 +199,7 @@ func getTransactionByID(db *sql.DB, id int) (*Transaction, error) {
 
 func createTransaction(db *sql.DB, t Transaction) (int64, error) {
 	result, err := db.Exec(
-		"INSERT INTO transactions (tanggal, jenis, kategori, nominal, keterangan) VALUES ($1, $2, $3, $4, $5)",
+		"INSERT INTO transactions (tanggal, jenis, kategori, nominal, keterangan) VALUES (?, ?, ?, ?, ?)",
 		t.Tanggal, t.Jenis, t.Kategori, t.Nominal, t.Keterangan,
 	)
 	if err != nil {
@@ -213,7 +211,7 @@ func createTransaction(db *sql.DB, t Transaction) (int64, error) {
 
 func updateTransaction(db *sql.DB, t Transaction) error {
 	result, err := db.Exec(
-		"UPDATE transactions SET tanggal=$1, jenis=$2, kategori=$3, nominal=$4, keterangan=$5 WHERE id=$6",
+		"UPDATE transactions SET tanggal=?, jenis=?, kategori=?, nominal=?, keterangan=? WHERE id=?",
 		t.Tanggal, t.Jenis, t.Kategori, t.Nominal, t.Keterangan, t.ID,
 	)
 	if err != nil {
@@ -229,7 +227,7 @@ func updateTransaction(db *sql.DB, t Transaction) error {
 }
 
 func deleteTransaction(db *sql.DB, id int) error {
-	result, err := db.Exec("DELETE FROM transactions WHERE id=$1", id)
+	result, err := db.Exec("DELETE FROM transactions WHERE id=?", id)
 	if err != nil {
 		return err
 	}
@@ -253,7 +251,7 @@ func validateTransaction(t Transaction) error {
 		return errors.New("kategori is required")
 	}
 	if t.Nominal <= 0 {
-		return  errors.New("nominal must be greater than 0")
+		return errors.New("nominal must be greater than 0")
 	}
 	return nil
 }
