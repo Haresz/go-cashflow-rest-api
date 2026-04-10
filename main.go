@@ -153,7 +153,7 @@ func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string
 	}
 	defer rows.Close()
 
-	var transactions []Transaction
+	transactions := []Transaction{}
 	for rows.Next() {
 		var t Transaction
 		err := rows.Scan(&t.ID, &t.Tanggal, &t.Jenis, &t.Kategori, &t.Nominal, &t.Keterangan)
@@ -164,11 +164,11 @@ func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string
 	}
 
 	countQuery := "SELECT COUNT(*) FROM transactions" + whereClause
-	countArgs := make([]interface{}, len(args)-2)
+	var countArgs []interface{}
 	if usePagination {
-		copy(countArgs, args[:len(args)-2])
+		countArgs = args[:len(args)-2]
 	} else {
-		copy(countArgs, args)
+		countArgs = args
 	}
 
 	var total int64
