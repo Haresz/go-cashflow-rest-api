@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -48,18 +49,7 @@ func main() {
 
 	r := gin.Default()
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
-	}
-
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{frontendURL},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
+	r.Use(cors.New(getCORSConfig()))
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -82,6 +72,33 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getCORSConfig() cors.Config {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		log.Println("Warning: FRONTEND_URL not set, using default http://localhost:5173")
+		frontendURL = "http://localhost:5173"
+	}
+
+	return cors.Config{
+		AllowOrigins:     parseOrigins(frontendURL),
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}
+}
+
+func parseOrigins(frontendURL string) []string {
+	var origins []string
+	for _, origin := range strings.Split(frontendURL, ",") {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			origins = append(origins, trimmed)
+		}
+	}
+	return origins
 }
 
 func getAllTransactions(db *sql.DB, filters map[string]string, sortColumn string, sortOrder string, page int, limit int) ([]Transaction, int64, error) {
